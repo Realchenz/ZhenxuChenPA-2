@@ -28,6 +28,13 @@ public class AVLPlayerNode{
         this.value = value;
     }
 
+    /**
+    * Insert a new node into the tree and return the new root
+    * @param newGuy the player to insert
+    * @param value the value to insert the player at
+    * @return the new root of the tree
+    * @runtime O(log n)
+     */
     public AVLPlayerNode insert(Player newGuy, double value) {
         if (value < this.value) {
             if (leftChild == null) {
@@ -43,13 +50,21 @@ public class AVLPlayerNode{
             } else {
                 rightChild = rightChild.insert(newGuy, value);
             }
+            rightWeight++;
         }
-
+        reconnectParentToChild();
         updateBalanceFactor();
         return balance();
     }
 
+    /**
+     * Delete a node from the tree and return the new root
+     * @param value the node with value to delete
+     * @return the new root of the tree
+     * @runtime O(log n)
+     */
     public AVLPlayerNode delete(double value) {
+        AVLPlayerNode current = this;
         if (value < this.value) {
             if (leftChild != null) {
                 leftChild = leftChild.delete(value);
@@ -57,6 +72,7 @@ public class AVLPlayerNode{
         } else if (value > this.value) {
             if (rightChild != null) {
                 rightChild = rightChild.delete(value);
+                rightWeight--;
             }
         } else {
             // Node to delete found
@@ -72,13 +88,21 @@ public class AVLPlayerNode{
                 this.data = successor.data;
                 this.value = successor.value;
                 rightChild = rightChild.delete(successor.value);
+                rightWeight--;
             }
+            current.parent = null;
         }
-
+        current.reconnectParentToChild();
         updateBalanceFactor();
-        return balance();
+        return current.balance();
     }
 
+    /**
+     * Find the minimum node in the tree
+     * @param node the root of the tree
+     * @return the minimum node in the tree
+     * @runtime O(log n)
+     */
     private AVLPlayerNode findMin(AVLPlayerNode node) {
         while (node.leftChild != null) {
             node = node.leftChild;
@@ -86,62 +110,118 @@ public class AVLPlayerNode{
         return node;
     }
 
+    /**
+     * Balance the tree
+     * @return the new root of the tree
+     * @runtime O(1)
+     */
     private AVLPlayerNode balance() {
+        AVLPlayerNode current = this;
         if (balanceFactor == 2) {
-            if (rightChild.balanceFactor < 0) {
-                rightChild.rotateRight();
-            }
-            return rotateLeft();
-        } else if (balanceFactor == -2) {
-            if (leftChild.balanceFactor > 0) {
+            if (leftChild.balanceFactor >= 0) {
+                current = leftChild;
+                rotateRight();
+            }else{
+                current = leftChild.rightChild;
+                AVLPlayerNode leftSubTree = leftChild.rightChild;
                 leftChild.rotateLeft();
+                leftChild = leftSubTree;
+                rotateRight();
             }
-            return rotateRight();
+            rotateLeft();
+        } else if (balanceFactor == -2) {
+            if (rightChild.balanceFactor <= 0) {
+                current = rightChild;
+                rotateLeft();
+            }else {
+                current = rightChild.leftChild;
+                AVLPlayerNode rightSubTree = rightChild.leftChild;
+                rightChild.rotateRight();
+                rightChild = rightSubTree;
+                rotateLeft();
+            }
         }
-        return this;
+        current.updateBalanceFactor();
+        return current;
     }
 
-    private AVLPlayerNode rotateLeft() {
+    /**
+     * Do a left rotation
+     * @runtime O(1)
+     */
+    private void rotateLeft() {
         AVLPlayerNode newRoot = rightChild;
-        rightChild = newRoot.leftChild;
-        if (newRoot.leftChild != null) {
-            newRoot.leftChild.parent = this;
+        if(newRoot == null){
+            return;
         }
+        rightChild = newRoot.leftChild;
         newRoot.leftChild = this;
         newRoot.parent = parent;
         parent = newRoot;
+        reconnectParentToChild();
         updateBalanceFactor();
         newRoot.updateBalanceFactor();
-        return newRoot;
+        rightWeight -= newRoot.rightWeight + 1;
     }
 
-    private AVLPlayerNode rotateRight() {
+    /**
+     * Do a right rotation
+     * @runtime O(1)
+     */
+    private void rotateRight() {
         AVLPlayerNode newRoot = leftChild;
-        leftChild = newRoot.rightChild;
-        if (newRoot.rightChild != null) {
-            newRoot.rightChild.parent = this;
+        if(newRoot == null){
+            return;
         }
+        leftChild = newRoot.rightChild;
         newRoot.rightChild = this;
         newRoot.parent = parent;
         parent = newRoot;
+        reconnectParentToChild();
         updateBalanceFactor();
         newRoot.updateBalanceFactor();
-        return newRoot;
+        newRoot.rightWeight = rightWeight + 1;
     }
 
+    /**
+     * Reconnect left child's or right child's parent to the node
+     * @runtime O(1)
+     */
+    private void reconnectParentToChild() {
+        if(leftChild != null){
+            leftChild.parent = this;
+        }else if(rightChild != null){
+            rightChild.parent = this;
+        }
+    }
+
+    /**
+     * Update the balance factor of the node
+     * @runtime O(log n)
+     */
     private void updateBalanceFactor() {
         int leftHeight = (leftChild == null) ? -1 : leftChild.getHeight();
         int rightHeight = (rightChild == null) ? -1 : rightChild.getHeight();
-        balanceFactor = rightHeight - leftHeight;
+        balanceFactor = leftHeight - rightHeight;
     }
 
+    /**
+     * Get the height of the node
+     * @return the height of the node
+     * @runtime O(log n)
+     */
     private int getHeight() {
         int leftHeight = (leftChild == null) ? -1 : leftChild.getHeight();
         int rightHeight = (rightChild == null) ? -1 : rightChild.getHeight();
         return 1 + Math.max(leftHeight, rightHeight);
     }
 
-    //this should return the Player object stored in the node with this.value == value
+    /**
+     * This should return the Player object stored in the node with this.value == value
+     * @param value the value to search for
+     * @return the player with the value
+     * @runtime O(log n)
+     */
     public Player getPlayer(double value){
         if (this.value == value) {
             return this.data;
@@ -154,7 +234,12 @@ public class AVLPlayerNode{
         }
     }
     
-    //this should return the rank of the node with this.value == value
+    /**
+     * This should return the rank of the node with this.value == value
+     * @param value the value to search for
+     * @return the rank of the node with the value
+     * @runtime O(n)
+     */
     public int getRank(double value){
         List<AVLPlayerNode> nodes = inOrderTraversal();
         for (int i = 0; i < nodes.size(); i++) {
@@ -165,6 +250,11 @@ public class AVLPlayerNode{
         return -1;
     }
 
+    /**
+     * In order traversal of the tree
+     * @return the list of nodes in order
+     * @runtime O(n)
+     */
     private List<AVLPlayerNode> inOrderTraversal() {
         List<AVLPlayerNode> nodes = new ArrayList<>();
         if (leftChild != null) {
@@ -178,8 +268,12 @@ public class AVLPlayerNode{
     }
 
 
-    //this should return the tree of names with parentheses separating subtrees
-    //eg "((bob)alice(bill))"
+    /**
+     * This returns the tree of names with parentheses separating subtrees
+     * eg "((bob)alice(bill))"
+     * @return the tree of names
+     * @runtime O(n)
+     */
     public String treeString(){
         StringBuilder sb = new StringBuilder();
         sb.append("(");
@@ -198,14 +292,19 @@ public class AVLPlayerNode{
         return sb.toString();
     }
 
-    //this should return a formatted scoreboard in descending order of value
-    //see example printout in the pdf for the command L
+    /**
+     * This should return a formatted scoreboard in descending order of value
+     * @return the scoreboard
+     * @runtime O(n log n)
+     */
     public String scoreboard(){
         StringBuilder sb = new StringBuilder();
 
         PriorityQueue<AVLPlayerNode> maxHeap = new PriorityQueue<>(Comparator.comparingDouble(AVLPlayerNode::getValue).reversed());
 
         traverseInOrder(this, maxHeap);
+
+        sb.append(String.format("%-20s %2s %5s%n", "Name", "ID", "ELO"));
 
         while (!maxHeap.isEmpty()) {
             AVLPlayerNode node = maxHeap.poll();
@@ -216,6 +315,12 @@ public class AVLPlayerNode{
         return sb.toString();
     }
 
+    /**
+     * In order traversal of the tree
+     * @param node the root of the tree
+     * @param maxHeap the max heap
+     * @runtime O(n)
+     */
     private void traverseInOrder(AVLPlayerNode node, PriorityQueue<AVLPlayerNode> maxHeap) {
         if (node == null) {
             return;
